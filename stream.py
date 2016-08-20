@@ -1,7 +1,7 @@
 import tweepy
 import json
 
-fp = open('output0.txt', 'w')
+fp = open('output0.txt', 'w', encoding='utf8')
 track = ['bit ly', 'bitly']
 count = 0
 i = 0
