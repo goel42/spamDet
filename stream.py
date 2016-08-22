@@ -26,7 +26,29 @@ class MyStreamListener(tweepy.StreamListener):
             urls = decoded['entities']['urls']
             for url in urls:
                 fp.write(url['expanded_url'] + '\n')
-                db.bitly_urls.insert_one({"text": decoded['text'], "url": url['expanded_url'], "source" : decoded['source'], "place":decoded['place'], "retweet_count": decoded['retweet_count'], "created_at":decoded['created_at'],"downloaded_at": datetime.datetime.utcnow(), "user": {"name":decoded['user']['name'],"screen_name":decoded['user']['screen_name'], "description": decoded['user']['description'],"statuses_count": decoded['user']['statuses_count'], "followers_count": decoded['user']['followers_count'],"verified":decoded['user']['verified'],"time_zone":decoded['user']['time_zone'],"location":decoded['user']['location'],"language":decoded['user']['lang'],"friends_count":decoded['user']['friends_count'],"favourites_count":decoded['user']['favourites_count'],"created_at":decoded['user']['created_at']}})
+                db.bitly_urls.insert_one({
+                    "id_str": decoded['id_str'],
+                    "text": decoded['text'],
+                    "created_at": decoded['created_at'],
+                    "coordinates": decoded['coordinates'],
+                    "hashtags": decoded['entities']['hashtags'],
+                    "user_mentions": decoded['entities']['user_mentions'],
+                    "user": {
+                        "id_str": decoded["user"]["id_str"],
+                        "screen_name": decoded["user"]["screen_name"],
+                        "friends_count": decoded["user"]["friends_count"],
+                        "followers_count": decoded["user"]["followers_count"],
+                        "listed_count": decoded["user"]["listed_count"],
+                        "statuses_count": decoded["user"]["statuses_count"],
+                        "lang": decoded["user"]["lang"],
+                        "location": decoded["user"]["location"],
+                        "time_zone": decoded["user"]["time_zone"],
+                        "utc_offset": decoded["user"]["utc_offset"]
+                    },
+                    "shortened_url": url["expanded_url"]
+                })
+
+                #  "url": url['expanded_url'], "source" : decoded['source'], "place":decoded['place'], "retweet_count": decoded['retweet_count'], "created_at":decoded['created_at'],"downloaded_at": datetime.datetime.utcnow(), "user": {"name":decoded['user']['name'],"screen_name":decoded['user']['screen_name'], "description": decoded['user']['description'],"statuses_count": decoded['user']['statuses_count'], "followers_count": decoded['user']['followers_count'],"verified":decoded['user']['verified'],"time_zone":decoded['user']['time_zone'],"location":decoded['user']['location'],"language":decoded['user']['lang'],"friends_count":decoded['user']['friends_count'],"favourites_count":decoded['user']['favourites_count'],"created_at":decoded['user']['created_at']}})
                 print(count)
                 count += 1
         return True
