@@ -25,12 +25,14 @@ class MyStreamListener(tweepy.StreamListener):
             urls = decoded['entities']['urls']
             for url in urls:
                 shortUrl = url['expanded_url']
-                userinfo = bitly_connection.info(link=shortUrl)
-                clicks = bitly_connection.link_clicks(link=shortUrl)
-                countries = bitly_connection.link_countries(link=shortUrl)
-                encoders_count = bitly_connection.link_encoders_count(link=shortUrl)['count']
-                referring_domains = bitly_connection.link_referring_domains(link=shortUrl)
-
+                try:
+                    userinfo = bitly_connection.info(link=shortUrl)
+                    clicks = bitly_connection.link_clicks(link=shortUrl)
+                    countries = bitly_connection.link_countries(link=shortUrl)
+                    encoders_count = bitly_connection.link_encoders_count(link=shortUrl)['count']
+                    referring_domains = bitly_connection.link_referring_domains(link=shortUrl)
+                except bitly_api.BitlyError as er:
+                    continue
                 fp.write(url['expanded_url'] + '\n')
                 db.bitly_urls.insert_one({
                     "id_str": decoded['id_str'],
