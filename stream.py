@@ -3,7 +3,7 @@ import json
 import pymongo
 from pymongo import MongoClient
 import datetime
-
+import bitly_api
 
 fp = open('output2.txt', 'w', encoding='utf8')
 client = MongoClient()
@@ -11,7 +11,6 @@ db = client.tweets
 
 track = ['bit ly', 'bitly']
 count = 0
-i = 0
 
 class MyStreamListener(tweepy.StreamListener):
 
@@ -25,6 +24,13 @@ class MyStreamListener(tweepy.StreamListener):
         if 'entities' in decoded and decoded['retweeted'] == False:
             urls = decoded['entities']['urls']
             for url in urls:
+                shortUrl = url['expanded_url']
+                userinfo = bitly_connection.info(link=shortUrl)
+                clicks = bitly_connection.link_clicks(link=shortUrl)
+                countries = bitly_connection.link_countries(link=shortUrl)
+                encoders_count = bitly_connection.link_encoders_count(link=shortUrl)['count']
+                referring_domains = bitly_connection.link_referring_domains(link=shortUrl)
+
                 fp.write(url['expanded_url'] + '\n')
                 db.bitly_urls.insert_one({
                     "id_str": decoded['id_str'],
@@ -45,10 +51,13 @@ class MyStreamListener(tweepy.StreamListener):
                         "time_zone": decoded["user"]["time_zone"],
                         "utc_offset": decoded["user"]["utc_offset"]
                     },
-                    "shortened_url": url["expanded_url"]
+                    "shortened_url": url["expanded_url"],
+                    "userinfo": userinfo,
+                    "clicks": clicks,
+                    "countries": countries,
+                    "encoders_count": encoders_count,
+                    "referring_domains": referring_domains
                 })
-
-                #  "url": url['expanded_url'], "source" : decoded['source'], "place":decoded['place'], "retweet_count": decoded['retweet_count'], "created_at":decoded['created_at'],"downloaded_at": datetime.datetime.utcnow(), "user": {"name":decoded['user']['name'],"screen_name":decoded['user']['screen_name'], "description": decoded['user']['description'],"statuses_count": decoded['user']['statuses_count'], "followers_count": decoded['user']['followers_count'],"verified":decoded['user']['verified'],"time_zone":decoded['user']['time_zone'],"location":decoded['user']['location'],"language":decoded['user']['lang'],"friends_count":decoded['user']['friends_count'],"favourites_count":decoded['user']['favourites_count'],"created_at":decoded['user']['created_at']}})
                 print(count)
                 count += 1
         return True
@@ -59,16 +68,18 @@ def getKeys():
     consumer_secret = inputFile.readline().strip().split(" ")[2]
     access_token = inputFile.readline().strip().split(" ")[2]
     access_token_secret = inputFile.readline().strip().split(" ")[2]
+    bitly_access_token = inputFile.readline().strip().split(" ")[2]
     inputFile.close()
-    return (consumer_key, consumer_secret, access_token, access_token_secret)
+    return (consumer_key, consumer_secret, access_token, access_token_secret, bitly_access_token)
 
 def getTweets():
-
-    consumer_key, consumer_secret, access_token, access_token_secret = getKeys()
+    consumer_key, consumer_secret, access_token, access_token_secret, bitly_access_token = getKeys()
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_token_secret)
 
     api = tweepy.API(auth)
+    global bitly_connection
+    bitly_connection = bitly_api.Connection(access_token=bitly_access_token)
     
     myStreamListener = MyStreamListener()
     myStream = tweepy.Stream(auth = api.auth, listener=myStreamListener)
