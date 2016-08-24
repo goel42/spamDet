@@ -4,6 +4,8 @@ import pymongo
 from pymongo import MongoClient
 import datetime
 import bitly_api
+import requests
+import time
 
 fp = open('output2.txt', 'w', encoding='utf8')
 client = MongoClient()
@@ -86,7 +88,15 @@ def getTweets():
     myStreamListener = MyStreamListener()
     myStream = tweepy.Stream(auth = api.auth, listener=myStreamListener)
     
-    myStream.filter(track=track)
+    connected = False
+    while not connected:
+        try:
+            myStream.filter(track=track)
+            connected = True
+        except Exception as err:
+            print("Network problem")
+            time.sleep(2)
+            pass
 
 if __name__ == '__main__':
     getTweets()
