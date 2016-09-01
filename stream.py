@@ -6,21 +6,23 @@ import datetime
 import bitly_api
 import requests
 import time
+from celery import Celery
 
-fp = open('output2.txt', 'w', encoding='utf8')
-client = MongoClient()
-db = client.tweets
-
-track = ['bit ly', 'bitly']
-count = 0
+BROKER_URL = 'mongodb://localhost:27017/jobs'
+celery = Celery('EOD_TASKS', broker=BROKER_URL)
+celery.config_from_object('celeryconfig')
 
 class MyStreamListener(tweepy.StreamListener):
+
+    def __init__(self, bitly_connection, database, count):
+        self.bitly_connection = bitly_connection
+        self.db = database
+        self.count = count
 
     def on_error(self, status):
         print(status)
 
     def on_data(self, data):
-        global count
         decoded = json.loads(data)
         # print(decoded)
         if 'entities' in decoded and decoded['retweeted'] == False:
@@ -28,15 +30,14 @@ class MyStreamListener(tweepy.StreamListener):
             for url in urls:
                 shortUrl = url['expanded_url']
                 try:
-                    userinfo = bitly_connection.info(link=shortUrl)
-                    clicks = bitly_connection.link_clicks(link=shortUrl)
-                    countries = bitly_connection.link_countries(link=shortUrl)
-                    encoders_count = bitly_connection.link_encoders_count(link=shortUrl)['count']
-                    referring_domains = bitly_connection.link_referring_domains(link=shortUrl)
+                    userinfo = self.bitly_connection.info(link=shortUrl)
+                    clicks = self.bitly_connection.link_clicks(link=shortUrl)
+                    countries = self.bitly_connection.link_countries(link=shortUrl)
+                    encoders_count = self.bitly_connection.link_encoders_count(link=shortUrl)['count']
+                    referring_domains = self.bitly_connection.link_referring_domains(link=shortUrl)
                 except bitly_api.BitlyError as er:
                     continue
-                fp.write(url['expanded_url'] + '\n')
-                db.bitly_urls.insert_one({
+                self.db.bitly_urls.insert_one({
                     "id_str": decoded['id_str'],
                     "text": decoded['text'],
                     "created_at": decoded['created_at'],
@@ -62,8 +63,8 @@ class MyStreamListener(tweepy.StreamListener):
                     "encoders_count": encoders_count,
                     "referring_domains": referring_domains
                 })
-                print(count)
-                count += 1
+                print(self.count)
+                self.count += 1
         return True
 
 def getKeys():
@@ -76,18 +77,22 @@ def getKeys():
     inputFile.close()
     return (consumer_key, consumer_secret, access_token, access_token_secret, bitly_access_token)
 
+@celery.task
 def getTweets():
     consumer_key, consumer_secret, access_token, access_token_secret, bitly_access_token = getKeys()
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_token_secret)
 
     api = tweepy.API(auth)
-    global bitly_connection
     bitly_connection = bitly_api.Connection(access_token=bitly_access_token)
     
-    myStreamListener = MyStreamListener()
+    client = MongoClient()
+    db = client.tweets
+    myStreamListener = MyStreamListener(bitly_connection, db, 0)
     myStream = tweepy.Stream(auth = api.auth, listener=myStreamListener)
-    
+
+    track = ['bit ly', 'bitly']
+   
     connected = False
     while not connected:
         try:
