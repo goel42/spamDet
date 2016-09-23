@@ -1,2 +1,4 @@
 details.txt
 output*.txt
+*.swp
+__pycache__
