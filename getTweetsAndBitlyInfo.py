@@ -1,16 +1,14 @@
 import tweepy
 import json
-import pymongo
 from pymongo import MongoClient
-import datetime
 import bitly_api
-import requests
 import time
 from celery import Celery
+import traceback
 
-BROKER_URL = 'mongodb://127.0.0.1:27017/jobs'
-celery = Celery('EOD_TASKS', broker=BROKER_URL)
-celery.config_from_object('celeryconfig')
+#BROKER_URL = 'mongodb://127.0.0.1:27017/jobs'
+#celery = Celery('EOD_TASKS', broker=BROKER_URL)
+#celery.config_from_object('celeryconfig')
 
 class MyStreamListener(tweepy.StreamListener):
 
@@ -35,6 +33,7 @@ class MyStreamListener(tweepy.StreamListener):
                     countries = self.bitly_connection.link_countries(link=shortUrl)
                     encoders_count = self.bitly_connection.link_encoders_count(link=shortUrl)['count']
                     referring_domains = self.bitly_connection.link_referring_domains(link=shortUrl)
+                    long_url = self.bitly_connection.expand(link=shortUrl)[0]["long_url"]
                 except bitly_api.BitlyError as er:
                     continue
                 self.db.bitly_urls.insert_one({
@@ -61,7 +60,9 @@ class MyStreamListener(tweepy.StreamListener):
                     "clicks": clicks,
                     "countries": countries,
                     "encoders_count": encoders_count,
-                    "referring_domains": referring_domains
+                    "referring_domains": referring_domains,
+                    "long_url": long_url
+
                 })
                 print(self.count)
                 self.count += 1
@@ -77,7 +78,7 @@ def getKeys():
     inputFile.close()
     return (consumer_key, consumer_secret, access_token, access_token_secret, bitly_access_token)
 
-@celery.task
+#@celery.task
 def getTweets():
     consumer_key, consumer_secret, access_token, access_token_secret, bitly_access_token = getKeys()
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
@@ -88,7 +89,7 @@ def getTweets():
     #bitly_connection = ""
     
     client = MongoClient('127.0.0.1', 27017)
-    db = client.tweets
+    db = client.extweets
     myStreamListener = MyStreamListener(bitly_connection, db, 0)
     myStream = tweepy.Stream(auth = api.auth, listener=myStreamListener)
 
@@ -99,7 +100,8 @@ def getTweets():
             myStream.filter(track=track)
             connected = True
         except Exception as err:
-            print("Network problem")
+            print(traceback.format_exc())
+            print("Trying again...")
             time.sleep(2)
             pass
    
