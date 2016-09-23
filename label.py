@@ -16,12 +16,23 @@ def setup():
     findLong(bitly_connection, db, google_access_token)
 
 def findLong(bitly_connection, db, google_access_token):
-    cursor = db.bitly_urls.find()
+    cursor = db.bitly_urls.find(no_cursor_timeout = True)
+    record_count = 0
     for record in cursor:
-        long_url = bitly_connection.expand(shortUrl=record["shortened_url"])[0]['long_url']
-        print(long_url)
-        label(google_access_token, long_url)
-        #time.sleep(2)
+        exception = True
+        while exception:
+            try:
+                long_url = bitly_connection.expand(shortUrl=record["shortened_url"])[0]['long_url']
+                print(long_url)
+                label(google_access_token, long_url)
+                record_count += 1
+                print(record_count)
+                exception = False
+            except Exception as err:
+                print(traceback.format_exc())
+                time.sleep(2)
+                pass
+    cursor.close()
 
 def label(google_access_token, long_url):
     URL = "https://safebrowsing.googleapis.com/v4/threatMatches:find?key={key}"
@@ -61,6 +72,4 @@ def getKeys():
 
 if __name__ == '__main__':
     setup()
-
-
 
