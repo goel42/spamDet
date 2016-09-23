@@ -84,7 +84,7 @@ def getTweets():
     bitly_connection = bitly_api.Connection(access_token=bitly_access_token)
     
     client = MongoClient('127.0.0.1', 27017)
-    db = client.extweets
+    db = client.tweets
     myStreamListener = MyStreamListener(bitly_connection, db, 0)
     myStream = tweepy.Stream(auth = api.auth, listener=myStreamListener)
 
