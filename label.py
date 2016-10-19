@@ -56,7 +56,7 @@ def label(google_access_token, long_url):
     response = requests.post(URL, data=request_body)
     print(response.status_code)
     print(response.text, end="")
-    if not response.text:
+    if len(response.text) > 4:
         global count
         count += 1
     print(count)
