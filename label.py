@@ -4,9 +4,13 @@ import pymongo
 import bitly_api
 import time
 import traceback
+from celery import Celery
 
-count = 0
+BROKER_URL = 'mongodb://127.0.0.1:27017/jobs'
+celery = Celery('EOD_TASKS', broker=BROKER_URL)
+celery.config_from_object('celeryconfig')
 
+@celery.task
 def setup():
     bitly_access_token, google_access_token = getKeys()
     bitly_connection = bitly_api.Connection(access_token = bitly_access_token)
@@ -16,8 +20,9 @@ def setup():
     findLong(bitly_connection, db, google_access_token)
 
 def findLong(bitly_connection, db, google_access_token):
-    cursor = db.bitly_urls.find(no_cursor_timeout = True, modifiers={"$snapshot": True})
+    cursor = db.bitly_urls.find(no_cursor_timeout = True)
     record_count = 0
+    spam_count = 0
     for record in cursor:
         if "long_url" in record:
             continue
@@ -32,6 +37,9 @@ def findLong(bitly_connection, db, google_access_token):
                 record["google_safe_browsing"] = result
                 record["long_url"] = long_url
                 db.bitly_urls.save(record)
+                if result == True:
+                    spam_count += 1
+                print(spam_count)
                 exception = False
             except Exception as err:
                 print(traceback.format_exc())
@@ -63,10 +71,7 @@ def label(google_access_token, long_url):
     print(response.text, end="")
     is_spam = False
     if len(response.text) > 4:
-        global count
-        count += 1
         is_spam = True
-    print(count)
     return is_spam
 
 def getKeys():
