@@ -19,7 +19,7 @@ def findLong(bitly_connection, db, google_access_token):
     cursor = db.bitly_urls.find(no_cursor_timeout = True, modifiers={"$snapshot": True})
     record_count = 0
     for record in cursor:
-        if "google_safe_browsing" in record:
+        if "long_url" in record:
             continue
         exception = True
         while exception:
@@ -30,6 +30,7 @@ def findLong(bitly_connection, db, google_access_token):
                 record_count += 1
                 print(record_count)
                 record["google_safe_browsing"] = result
+                record["long_url"] = long_url
                 db.bitly_urls.save(record)
                 exception = False
             except Exception as err:
