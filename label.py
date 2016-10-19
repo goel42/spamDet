@@ -16,17 +16,21 @@ def setup():
     findLong(bitly_connection, db, google_access_token)
 
 def findLong(bitly_connection, db, google_access_token):
-    cursor = db.bitly_urls.find(no_cursor_timeout = True)
+    cursor = db.bitly_urls.find(no_cursor_timeout = True, modifiers={"$snapshot": True})
     record_count = 0
     for record in cursor:
+        if "google_safe_browsing" in record:
+            continue
         exception = True
         while exception:
             try:
                 long_url = bitly_connection.expand(shortUrl=record["shortened_url"])[0]['long_url']
                 print(long_url)
-                label(google_access_token, long_url)
+                result = label(google_access_token, long_url)
                 record_count += 1
                 print(record_count)
+                record["google_safe_browsing"] = result
+                db.bitly_urls.save(record)
                 exception = False
             except Exception as err:
                 print(traceback.format_exc())
@@ -56,10 +60,13 @@ def label(google_access_token, long_url):
     response = requests.post(URL, data=request_body)
     print(response.status_code)
     print(response.text, end="")
+    is_spam = False
     if len(response.text) > 4:
         global count
         count += 1
+        is_spam = True
     print(count)
+    return is_spam
 
 def getKeys():
     inputFile = open('details.txt', 'r')
