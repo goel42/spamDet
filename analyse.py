@@ -1,11 +1,52 @@
 from pymongo import MongoClient
+import traceback
 
 mongoclient = MongoClient('127.0.0.1', 27017)
 db = mongoclient.tweets
 cursor = db.bitly_urls.find()
 
 def main():
-    find_clicks()
+    find_encoders_count()
+
+
+def find_encoders_count():
+    encoders = dict()
+    for record in cursor:
+        shortened_url = record["shortened_url"]
+        encoders_count = record["encoders_count"]
+        encoders[shortened_url] = encoders_count
+    write_to_file('TweetsWithEncoders', encoders)
+
+def find_total_domains():
+    total_domains = dict()
+    for record in cursor:
+        domains = record["referring_domains"]
+        for domain in domains:
+            try:
+                domain_name = domain["domain"]
+                domain_clicks = domain["clicks"]
+                total_domains[domain_name] = total_domains.get(domain_name,0) \
+                        + domain_clicks
+            except KeyError as kerr:
+                domain_name = domain["referrer_app"]
+                domain_clicks = domain["clicks"]
+                total_domains[domain_name] = total_domains.get(domain_name,0) \
+                        + domain_clicks
+                
+
+    write_to_file('ClicksByDomains', total_domains)
+
+
+def find_total_clicks():
+    total_clicks = dict()
+    for record in cursor:
+        countries = record["countries"]
+        for country in countries:
+            country_name = country["country"]
+            country_clicks = country["clicks"]
+            total_clicks[country_name] = total_clicks.get(country_name, 0) \
+                    + country_clicks
+    write_to_file('ClicksByCountries', total_clicks)
 
 def find_clicks():
     clicks = dict()
