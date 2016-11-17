@@ -9,7 +9,7 @@ count = 0
 
 def setup():
     bitly_access_token, google_access_token, wot_access_token = getKeys()
-    #long_url = 'ianfette.org'
+    long_url = 'ianfette.org'
     URL = 'http://api.mywot.com/0.4/public_link_json2?hosts={long_url}/&key={key}'
     URL = URL.format(key=wot_access_token, long_url=long_url)
     response = requests.get(URL)
