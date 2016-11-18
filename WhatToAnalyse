@@ -6,8 +6,16 @@ Maximum language of tweets
 Maximum statuses count
 
 Bitly:
-Maximum Clicks
+Maximum Clicks - top 10
+Sum of all countries with clicks
+Sum of all domains with clicks -top 10
+Encoders count - top 10
+Maximum long url referred in tweets - top 10
+
+Spam:
 Sum of all countries with clicks
 Sum of all domains with clicks
-Maximum encoders count
-Maximum long url referred in tweets
+Encoders count
+Spam with clicks
+Spam with languages
+Spam with time of tweets
